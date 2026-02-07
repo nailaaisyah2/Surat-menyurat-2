@@ -1,0 +1,271 @@
+PENJELASAN  singkat FITUR APLIKASI “SURAT MENYURAT”
+
+Dokumen ini menjelaskan fitur-fitur aplikasi berdasarkan role (Admin, Petugas, User) dengan bahasa yang mudah dipahami. Isi penjelasan disesuaikan dengan aturan akses yang diterapkan di sistem (middleware role), rute, dan controller pada project ini.
+
+
+======================================================================
+1) GAMBARAN UMUM APLIKASI
+======================================================================
+Aplikasi ini dipakai untuk:
+- Mengelola akun pengguna per divisi (termasuk persetujuan pendaftaran user).
+- Mengirim “surat” antar divisi (untuk rapat kantor atau pertemuan individu).
+- Menerima surat masuk, melihat detail, menanggapi (terima/tolak) dan memberi catatan.
+- Mengelola lampiran surat (upload saat membuat surat, download lampiran).
+- Mencatat log aktivitas (khusus admin).
+
+Ada 3 role utama:
+- admin
+- petugas
+- user
+
+Istilah penting:
+- Divisi: kelompok/instansi/unit (misalnya “Divisi Teknologi Informasi”).
+- Surat Masuk: surat yang ditujukan ke divisi (atau individu) dan muncul di tab “Masuk”.
+- Surat Keluar: surat yang dibuat/dikirim oleh akun yang sedang login dan muncul di tab “Keluar”.
+- Status akun (khusus role user):
+  - pending: menunggu persetujuan admin/petugas
+  - approved: sudah disetujui, bisa login
+  - rejected: ditolak, tidak bisa login
+- Status surat:
+  - pending: belum ditanggapi
+  - diterima: disetujui/diterima oleh penerima
+  - ditolak: ditolak oleh penerima
+
+
+======================================================================
+2) FITUR UMUM (BISA DIAKSES SEMUA ROLE SETELAH LOGIN)
+======================================================================
+2.1 Login & Logout
+- Login melalui email dan password.
+- Catatan penting:
+  - Jika role = user dan status akun masih “pending”, user tidak bisa login dan akan diberi pesan “menunggu persetujuan”.
+  - Jika role = user dan status akun “rejected”, user tidak bisa login dan diminta menghubungi admin.
+  - Admin dan Petugas tidak dicek status-nya saat login (bisa login walaupun status tidak di-set).
+- Logout dilakukan via tombol logout, dan sistem akan mengakhiri sesi.
+
+2.2 Registrasi (Daftar Akun)
+- Registrasi ditujukan untuk membuat akun role “user”.
+- Saat daftar, user bisa:
+  - Memilih divisi yang sudah ada, ATAU
+  - Membuat divisi baru (opsional) jika belum tersedia.
+- Setelah registrasi:
+  - Akun user diset ke status “pending”.
+  - User belum bisa login sampai disetujui admin/petugas pada divisinya.
+- Email hanya boleh dipakai 1 akun (kalau email sudah ada, registrasi ditolak).
+- Bisa upload foto profil (jpeg/jpg/png/gif, max 2MB).
+
+2.3 Dashboard
+- Semua role punya halaman dashboard.
+- Isi dashboard berbeda sesuai role (statistik dan ringkasan data yang relevan).
+- Sistem otomatis mengarahkan dashboard sesuai role (admin/petugas/user).
+
+2.4 Profil
+- Semua role bisa:
+  - Melihat profil
+  - Mengubah data profil (sesuai form yang disediakan)
+
+2.5 Menu “Surat Masuk” (Satu Menu, Perilaku Berbeda per Role)
+Menu ini adalah pusat fitur surat: list surat, buat surat, lihat detail, tanggapi, dan download lampiran.
+Walaupun rute/URL-nya sama untuk semua role (`/surat_masuk`), sistem akan otomatis menampilkan versi yang sesuai role (admin/petugas/user).
+
+Di halaman surat, ada konsep “tab”:
+- Tab “Masuk”: daftar surat yang masuk ke divisi/akun penerima.
+- Tab “Keluar”: daftar surat yang dibuat/dikirim oleh pengirim.
+Setiap role menyimpan tab terakhir di session (jadi saat kembali ke halaman surat, tab terakhir biasanya tetap).
+
+
+======================================================================
+3) FITUR ROLE: ADMIN
+======================================================================
+3.1 Dashboard Admin
+Admin melihat statistik berbasis DIVISI admin yang sedang login, misalnya:
+- Total surat masuk/keluar divisi
+- Jumlah surat berdasarkan status (pending/diterima/ditolak)
+- Statistik per jenis surat (pertemuan individu / rapat kantor)
+- Statistik hari ini/bulan ini
+- Statistik user di divisinya (termasuk jumlah user pending)
+- Grafik surat per bulan (6 bulan terakhir)
+
+Catatan penting:
+- Statistik admin fokus ke divisi admin sendiri (bukan global seluruh divisi).
+
+3.2 Kelola Surat (Admin)
+Admin dapat:
+- Melihat surat masuk ke divisinya:
+  - Surat yang penerimanya = divisi admin
+  - Pengirim berasal dari divisi lain (bukan divisi admin sendiri)
+- Melihat surat keluar dari divisinya:
+  - Surat yang dikirim oleh user yang berada di divisi admin (termasuk jika penerimanya divisi mana pun)
+- Membuat surat baru:
+  - Admin bisa membuat surat ke divisi lain (divisi sendiri tidak ditampilkan sebagai tujuan).
+  - Admin bisa membuat 2 jenis:
+    - pertemuan_individu (wajib pilih penerima_user_id jika jenis ini dipilih)
+    - rapat_kantor
+- Menanggapi surat (terima/tolak + catatan):
+  - Admin hanya bisa menanggapi surat yang MASUK ke divisinya.
+  - Surat hanya bisa ditanggapi jika status masih “pending”.
+  - Saat menanggapi, admin bisa menambahkan lampiran balasan (lampiran_response).
+- Download lampiran:
+  - Admin bisa download lampiran dari surat yang masuk ke divisinya, atau surat yang admin kirim sendiri.
+
+Aturan lampiran (umum untuk surat dan balasan):
+- Format: pdf, doc, docx, jpg, jpeg, png
+- Maks 5MB per file
+- Bisa lebih dari 1 file (array lampiran)
+
+3.3 Activity Logs (Log Aktivitas)
+Khusus admin dapat membuka halaman “Activity Logs”.
+Yang ditampilkan:
+- Hanya aktivitas yang terjadi di divisi admin sendiri (bukan semua divisi).
+- Bisa difilter berdasarkan:
+  - action (jenis aktivitas)
+  - user
+  - rentang tanggal
+
+3.4 Kelola User (Admin)
+Admin dapat mengelola user, dengan aturan penting:
+- Admin hanya bisa melihat/mengedit/menghapus user yang berada di DIVISI admin sendiri.
+- Di halaman daftar user, admin bisa memakai filter:
+  - Filter role (admin/petugas/user)
+  - Pencarian (nama atau email)
+
+Fitur detail:
+- Lihat detail user (termasuk relasi divisi & riwayat surat terkait user).
+- Buat user baru:
+  - Admin bisa membuat user untuk divisi mana pun.
+  - Saat membuat user, status langsung “approved” (langsung aktif).
+  - Ada aturan “1 admin per divisi”:
+    - Jika di suatu divisi sudah ada admin, maka tidak bisa membuat admin kedua di divisi yang sama.
+- Edit user:
+  - Admin hanya bisa edit user dalam divisinya.
+  - Admin tidak bisa mengubah role admin menjadi non-admin.
+  - Admin juga tidak bisa mengubah user/petugas menjadi admin lewat edit jika di divisi itu sudah ada admin.
+- Hapus user:
+  - Admin hanya bisa menghapus user dalam divisinya.
+
+3.5 Persetujuan Akun (Approval Registrasi) oleh Admin
+Admin dapat melihat daftar akun user dengan status “pending” di divisinya dan:
+- Approve: mengubah status jadi “approved”
+- Reject: mengubah status jadi “rejected”
+
+Catatan:
+- Admin hanya bisa approve/reject user yang divisinya sama dengan admin.
+
+3.6 Kelola Divisi (Admin)
+Admin dapat mengelola divisi secara global:
+- Lihat semua divisi
+- Buat divisi baru
+- Lihat detail divisi (creator, user di divisi tersebut, surat terkait)
+- Edit nama divisi
+- Hapus divisi:
+  - Divisi tidak bisa dihapus jika masih memiliki anggota (users).
+
+
+======================================================================
+4) FITUR ROLE: PETUGAS
+======================================================================
+4.1 Dashboard Petugas
+Petugas melihat statistik surat MASUK ke divisinya, misalnya:
+- Total surat masuk
+- Surat masuk pending / diterima / ditolak
+- Statistik jenis surat (pertemuan individu / rapat kantor) berdasarkan surat masuk
+- Statistik hari ini/bulan ini
+- Jumlah user pending di divisi petugas
+- Grafik surat masuk per bulan (6 bulan terakhir)
+
+4.2 Kelola Surat (Petugas)
+Secara fitur, Petugas mirip dengan Admin untuk modul surat, tetapi tetap berbasis divisi petugas:
+- Tab Masuk:
+  - Surat yang penerimanya = divisi petugas
+  - Pengirim berasal dari divisi lain (bukan divisi petugas)
+- Tab Keluar:
+  - Surat yang dikirim oleh user dari divisi petugas
+- Membuat surat:
+  - Petugas bisa membuat surat ke divisi lain (divisi sendiri tidak ditampilkan sebagai tujuan)
+  - Petugas bisa membuat 2 jenis:
+    - pertemuan_individu
+    - rapat_kantor
+- Menanggapi surat:
+  - Petugas hanya bisa menanggapi surat yang masuk ke divisinya
+  - Hanya jika status surat masih “pending”
+  - Bisa menambahkan catatan dan lampiran balasan
+- Download lampiran:
+  - Petugas bisa download lampiran surat yang masuk ke divisinya, atau surat yang petugas kirim sendiri
+
+4.3 Persetujuan Akun (Approval Registrasi) oleh Petugas
+Petugas dapat mengelola pendaftaran user “pending” di divisinya:
+- Melihat daftar user pending
+- Approve: status -> approved
+- Reject: status -> rejected
+
+Catatan:
+- Petugas hanya bisa approve/reject user di divisinya sendiri.
+
+
+======================================================================
+5) FITUR ROLE: USER (PENGGUNA BIASA)
+======================================================================
+5.1 Dashboard User
+User melihat statistik surat yang USER itu kirim (surat keluar milik user), misalnya:
+- Total surat saya
+- Surat pending / diterima / ditolak
+- Statistik jenis surat yang dikirim user
+- Statistik hari ini/bulan ini
+- Grafik surat per bulan (6 bulan terakhir)
+
+5.2 Kelola Surat (User)
+User dapat:
+- Melihat surat keluar:
+  - Semua surat yang pengirimnya adalah user itu sendiri.
+- Melihat surat masuk:
+  - Surat yang ditujukan ke divisi user (jika user punya divisi), DAN/ATAU
+  - Surat pertemuan individu yang ditujukan langsung ke user (penerima_user_id = user)
+  - Sistem memastikan surat masuk ini bukan surat yang dikirim oleh user itu sendiri.
+- Membuat surat:
+  - User hanya bisa membuat surat jenis “pertemuan_individu”.
+  - User wajib memilih:
+    - divisi penerima
+    - nama penerima (penerima_user_id)
+  - Tujuan tidak boleh divisi user sendiri (divisi sendiri tidak ditampilkan sebagai pilihan).
+- Menanggapi surat:
+  - User bisa menanggapi surat yang masuk ke divisinya, ATAU surat pertemuan individu yang memang ditujukan ke user.
+  - Surat hanya bisa ditanggapi jika status masih “pending”.
+- Download lampiran:
+  - User bisa download lampiran surat yang dia kirim, atau surat yang masuk ke divisinya, atau surat individu yang ditujukan ke user.
+
+5.3 Divisi (User)
+User memiliki fitur divisi terbatas:
+- Melihat divisi sendiri (hanya 1 divisi: divisi yang melekat di akun user).
+- Melihat detail divisi sendiri.
+- Membuat divisi baru (fitur create divisi tersedia di menu user).
+
+Catatan akses:
+- User tidak bisa membuka detail divisi lain (hanya divisi miliknya).
+
+
+======================================================================
+6) ATURAN AKSES (RINGKAS) & KEAMANAN
+======================================================================
+- Semua fitur utama (dashboard, profile, surat, dll) butuh login (auth).
+- Middleware role memastikan:
+  - `role:admin` hanya untuk admin
+  - `role:petugas` untuk petugas (dan admin juga boleh lewat aturan middleware)
+  - `role:user` untuk user/petugas/admin
+- Hampir semua aksi penting dibatasi method-nya (misalnya approve/reject harus POST).
+- Akses data cenderung “berbasis divisi”:
+  - Admin: banyak modul user & log aktivitas dibatasi hanya divisi admin.
+  - Petugas: approval user dibatasi hanya divisi petugas.
+  - Surat: lihat/tanggapi juga dibatasi berdasarkan divisi dan/atau penerima individu.
+
+
+======================================================================
+7) AKUN DEFAULT (UNTUK TESTING / DEMO)
+======================================================================
+Jika database di-seed, sistem membuat akun contoh:
+- Admin: admin@example.com / password
+- Petugas: petugas@example.com / password
+- User: user@example.com / password
+
+Catatan: password di atas hanya untuk demo/local development. Untuk produksi, wajib diganti.
+
+
