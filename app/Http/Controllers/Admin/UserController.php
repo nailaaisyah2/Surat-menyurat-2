@@ -13,8 +13,32 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
-        if ($request->query->count() > 0) {
+        // Hanya tolak query yang tidak diperbolehkan.
+        // Sebelumnya kode men-`abort(404)` jika ada query apapun,
+        // yang menyebabkan akses seperti `/users?role_filter=admin` menghasilkan 404.
+        // Sekarang izinkan query untuk `role_filter` dan `search` dan simpan ke session.
+        $allowedQuery = ['role_filter', 'search'];
+        if ($request->query->except($allowedQuery)->count() > 0) {
             abort(404);
+        }
+
+        // Jika ada filter melalui GET, simpan ke session sehingga mekanisme filter lama tetap bekerja.
+        if ($request->query->hasAny($allowedQuery)) {
+            $role = $request->query('role_filter');
+            $search = $request->query('search');
+            $data = [];
+
+            if ($role !== null && in_array($role, ['admin', 'petugas', 'user'])) {
+                $data['role_filter'] = $role;
+            }
+
+            if ($search !== null) {
+                $data['search'] = mb_substr($search, 0, 255);
+            }
+
+            if (!empty($data)) {
+                session(['admin_users_filters' => $data]);
+            }
         }
 
         $user = auth()->user();
