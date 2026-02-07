@@ -18,12 +18,14 @@ class UserController extends Controller
         // yang menyebabkan akses seperti `/users?role_filter=admin` menghasilkan 404.
         // Sekarang izinkan query untuk `role_filter` dan `search` dan simpan ke session.
         $allowedQuery = ['role_filter', 'search'];
-        if ($request->query->except($allowedQuery)->count() > 0) {
+        // Gunakan array/collection untuk memeriksa parameter query yang tidak diizinkan
+        $extra = collect($request->query())->except($allowedQuery);
+        if ($extra->count() > 0) {
             abort(404);
         }
 
         // Jika ada filter melalui GET, simpan ke session sehingga mekanisme filter lama tetap bekerja.
-        if ($request->query->hasAny($allowedQuery)) {
+        if ($request->hasAny($allowedQuery)) {
             $role = $request->query('role_filter');
             $search = $request->query('search');
             $data = [];
